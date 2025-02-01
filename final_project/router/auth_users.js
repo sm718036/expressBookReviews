@@ -46,9 +46,7 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
   const { isbn } = req.params;
   const { review } = req.query;
   const username = req.session.user;
-  const findBookByIsbn = Object.values(books).find(
-    (book) => book.isbn === isbn
-  );
+  const findBookByIsbn = books[isbn];
   if (!findBookByIsbn) {
     return res.status(404).json({
       message: "Book not found",
@@ -59,16 +57,8 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
       message: "Review content is required.",
     });
   }
-  // Check if the user already posted a review for this ISBN
-  const existingReview = findBookByIsbn.reviews.find(review => review.reviewer === username);
-
-  if (existingReview) {
-      existingReview.comment = review; // Modify existing review
-      res.json({ message: "Review updated successfully.", review: existingReview.comment });
-  } else {
-    findBookByIsbn.reviews.push({ reviewer: username, comment: review }); // Add new review
-      res.json({ message: "Review added successfully.", reviews: findBookByIsbn.reviews });
-  }
+  findBookByIsbn.reviews[username] = review; // Add new review
+  res.send(`The review for the book with ISBN ${isbn} has been added.`);
 });
 
 // Code to delete book
@@ -85,23 +75,17 @@ regd_users.delete("/auth/review/:isbn", (req, res) => {
       message: "ISBN is required.",
     });
   }
-  const findBookByIsbn = Object.values(books).find(
-    (book) => book.isbn === isbn
-  );
+  const findBookByIsbn = books[isbn];
   if (!findBookByIsbn) {
     return res.status(404).json({
       message: "Book not found",
     });
   }
-  // Check if the user already posted a review for this ISBN
-  const reviewsOfUser = findBookByIsbn.reviews.find(review => review.reviewer === username);
-  if (reviewsOfUser) {
-      // Delete existing review
-      const indexOfUser = findBookByIsbn.reviews.indexOf(reviewsOfUser);
-      findBookByIsbn.reviews.splice(indexOfUser, 1);
-      res.json({ message: "Deleted user reviews", reviews: findBookByIsbn.reviews });
+  if (books[isbn]?.reviews?.[username]) {
+    delete books[isbn].reviews[username];
+    res.send(`Reviews for the ISBN ${isbn} by the user ${username} deleted.`);
   } else {
-      res.json({ message: "No reviews found for this user", reviews: findBookByIsbn.reviews });
+    res.send("Review not found");
   }
 });
 
